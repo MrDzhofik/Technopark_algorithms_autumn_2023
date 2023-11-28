@@ -61,9 +61,10 @@ public:
         bool del = true;
         int index = -1;
         size_t second = 0;
-        int i = 0;
+        int i = 1;
         size_t hash = first % tableSize;
 
+        // поиск добавляемой ячейки
         if (table[hash] == key)
         {
             return false;
@@ -83,7 +84,7 @@ public:
                     if (table[hash] == DELETED && del)
                     {
                         del = false;
-                        index = hash;
+                        index = hash; // запоминаем первую удаленную ячейку
                     }
                     if (table[hash] == EMPTY)
                     {
@@ -92,22 +93,28 @@ public:
                 }
             }
         }
+        // если не нашли удаленных ячеек, то записываем в пустую
         if (index == -1)
         {
             index = hash;
         }
+        // если ячейка не удаленная и не пустая, мы сделали кол-во пробирований = количество ячеек в таблице, и нужно увеличить таблицу
         if (table[index] != DELETED && table[index] != EMPTY)
         {
             grow();
-            i = 0;
+            i = 1;
+            index = first % tableSize;
             while (table[index] != DELETED && table[index] != EMPTY && i < tableSize)
             {
-                index = (first + i * second) % tableSize;
+                index = (first + i * second) % tableSize; // пробирование двойным хэшированием
+                ++i;
             }
         }
-        index = hash;
         table[index] = key;
-        ++size;
+        if (del)
+        {
+            ++size;
+        }
         return true;
     }
 
@@ -126,7 +133,7 @@ public:
             size_t second = hasherTwo(key);
             for (int i = 0; i < tableSize; ++i)
             {
-                hash = (first + i * second) % tableSize;
+                hash = (first + i * second) % tableSize; // двойное хэширование
                 if (table[hash] == key)
                 {
                     return true;
@@ -154,7 +161,7 @@ public:
         else
         {
             size_t second = hasherTwo(key);
-            for (int i = 0; i < tableSize; ++i)
+            for (int i = 1; i < tableSize; ++i)
             {
                 hash = (first + i * second) % tableSize;
                 if (table[hash] == key)
@@ -167,8 +174,8 @@ public:
                     return false;
                 }
             }
-            return false;
         }
+        return false;
     }
 
 private:
@@ -182,18 +189,16 @@ private:
         {
             if (table[i] != EMPTY)
             {
+                // удаленные ячейки не заносим в новую таблицу, поэтому уменьшаем размер
                 if (table[i] == DELETED)
                 {
                     --size;
                     break;
                 }
+                // иначе ищем место для ячейки в новой таблицец
                 size_t firstHash = hasherOne(table[i]);
                 size_t hash = firstHash % tableSize;
-                if (newTable[hash] == EMPTY)
-                {
-                    newTable[hash] = table[i];
-                }
-                else
+                if (newTable[hash] != EMPTY)
                 {
                     int j = 1;
                     size_t secondHash = hasherTwo(table[i]);
@@ -203,8 +208,8 @@ private:
                         ++j;
                         hash = (firstHash + j * secondHash) % tableSize;
                     }
-                    newTable[hash] = table[i];
                 }
+                newTable[hash] = table[i];
             }
         }
 
@@ -305,10 +310,10 @@ void testLogic()
         assert(out.str() == "OK\nOK\nOK\nOK\nFAIL\n");
     }
 
-    // double resize and deleting
+    // double resize and deleting and find
     {
         std::stringstream in;
-        in << "+ hello + bye + good + afternoon + day + night + minecraft + football + messi + ok + lol + alg + cobol + fortran + popo - hello - bye ? day - good - afternoon - day - night - minecraft - football - messi - ok - lol - alg - cobol - fortran - popo";
+        in << "+ hello + bye + good + afternoon + day + night + minecraft + football + messi + ok + lol + alg + cobol + fortran + popo - hello - bye ? day ? good ? afternoon ? day ? night ? minecraft ? football ? messi ? ok ? lol - alg - cobol - fortran - popo";
 
         std::stringstream out;
         doLogic(in, out);
@@ -316,41 +321,41 @@ void testLogic()
         assert(out.str() == "OK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\n");
     }
 
-    // triple resize and delete
+    // triple resize and delete and find
     {
         std::stringstream in;
-        in << "+ a + b + c + d + e + f + g + h + i + j + k + l + m + n + o + p + q + r + s + t + u + v + w + x + y + z - a - b - c - d - e - f - g - h - i - j - k - l - m - n - o - p - q - r - s - t - u - v - w - x - y - z";
+        in << "+ a + b + c + d + e + f + g + h + i + j + k + l + m + n + o + p + q + r + s + t + u + v + w + x + y + z - a - b - c - d ? e ? f ? g ? h ? i ? j ? k ? l - m - n - o - p - q - r - s ? t ? u ? v ? w ? x ? y ? z";
 
         std::stringstream out;
         doLogic(in, out);
-        // std::cout << out.str();
+        assert(out.str() == "OK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\n");
     }
 
+    // long strings
     {
         std::stringstream in;
         in << "+ abcdefghijklmnopqrstuvwxyz + abcdefghijklmnopqrstuvwxyzzyxwvutsrqponmlkjihgfedcba - abcdefghijklmnopqrstuvwxyzzyxwvutsrqponmlkjihgfedcba + abcdefghijklmnopqrstuvwxyzzyxwvutsrqponmlkjihgfedcba ? abcdefghijklmnopqrstuvwxyz";
 
         std::stringstream out;
         doLogic(in, out);
-        // std::cout << out.str();
         assert(out.str() == "OK\nOK\nOK\nOK\nOK\n");
     }
 
+    // OK and FAIL
     {
         std::stringstream in;
         in << "+ cat + rat + bat + hat + mat + pat + sat + vat + fat + gat + hat + iat + jat + kat + lat + mat + nat + oat + pat + qat + rat + sat + tat + uat + vat + wat + xat + yat + zat - vat - wat - xat - yat - zat ? cat ? rat ? bat ? hat ? mat";
 
         std::stringstream out;
         doLogic(in, out);
-        std::cout << out.str();
         assert(out.str() == "OK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nFAIL\nOK\nOK\nOK\nOK\nFAIL\nOK\nOK\nFAIL\nOK\nFAIL\nFAIL\nOK\nOK\nFAIL\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\n");
     }
 }
 
 int main()
 {
-    testLogic();
-    std::cout << "Test OK" << std::endl;
+    // testLogic();
+    // std::cout << "Test OK" << std::endl;
 
     Hashtable<std::string, StringHasher> table;
 
@@ -376,12 +381,7 @@ int main()
             std::cout << (table.Delete(key) ? "OK" : "FAIL") << std::endl;
             break;
         }
-        case '!':
-        {
-            return 0;
-        }
         }
     }
-
     return 0;
 }

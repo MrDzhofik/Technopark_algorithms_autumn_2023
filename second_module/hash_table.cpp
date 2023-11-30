@@ -86,18 +86,18 @@ public:
         {
             index = hash;
         }
-        // если ячейка не удаленная и не пустая, мы сделали кол-во пробирований = количество ячеек в таблице, нужно увеличить таблицу
-        // if (table[index] != DELETED && table[index] != EMPTY)
-        // {
-        //     grow();
-        //     i = 1;
-        //     index = first % tableSize;
-        //     while (table[index] != DELETED && table[index] != EMPTY && i < tableSize)
-        //     {
-        //         index = (first + i * second) % tableSize; // пробирование двойным хэшированием
-        //         ++i;
-        //     }
-        // }
+        // если ячейка не удаленная и не пустая, мы сделали кол-во пробирований = количество ячеек в таблице
+        if (table[index] != DELETED && table[index] != EMPTY)
+        {
+            // grow();
+            int i = 0;
+            index = first % tableSize;
+            while (table[index] != DELETED && table[index] != EMPTY && i < tableSize)
+            {
+                ++i;
+                index = (first + i * second) % tableSize + 1; // пробирование двойным хэшированием
+            }
+        }
         table[index] = key;
         if (del)
         {
@@ -166,23 +166,24 @@ private:
                 if (table[i] == DELETED)
                 {
                     --size;
-                    break;
                 }
                 // иначе ищем место для ячейки в новой таблице
-                size_t firstHash = hasherOne(table[i]);
-                size_t hash = firstHash % tableSize;
-                if (newTable[hash] != EMPTY)
+                else
                 {
-                    int j = 0;
-                    size_t secondHash = hasherTwo(table[i]) * 2 + 1;
-                    hash = firstHash % tableSize;
-                    while (newTable[hash] != EMPTY)
+                    size_t firstHash = hasherOne(table[i]);
+                    size_t hash = firstHash % tableSize;
+                    if (newTable[hash] != EMPTY)
                     {
-                        ++j;
-                        hash = (firstHash + j * secondHash) % tableSize;
+                        int j = 0;
+                        size_t secondHash = hasherTwo(table[i]) * 2 + 1;
+                        while (newTable[hash] != EMPTY)
+                        {
+                            ++j;
+                            hash = (firstHash + j * secondHash) % tableSize;
+                        }
                     }
+                    newTable[hash] = table[i];
                 }
-                newTable[hash] = table[i];
             }
         }
 

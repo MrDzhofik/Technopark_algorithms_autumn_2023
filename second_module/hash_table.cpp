@@ -41,10 +41,10 @@ private:
 };
 
 template <typename T, typename Hasher>
-class Hashtable
+class HashTable
 {
 public:
-    Hashtable(size_t initial_size = DEFAULT_SIZE)
+    HashTable(size_t initial_size = DEFAULT_SIZE)
         : size(0), table(initial_size, EMPTY), tableSize(initial_size)
     {
     }
@@ -52,6 +52,7 @@ public:
     // Adding
     bool Add(const T &key)
     {
+        // если коэффициент заполнения >  3/4
         if (4 * size >= tableSize * 3)
         {
             grow();
@@ -60,56 +61,43 @@ public:
         size_t first = hasherOne(key);
         bool del = true;
         int index = -1;
-        size_t second = 0;
-        int i = 1;
+        size_t second = hasherTwo(key) * 2 + 1; // h2 должна возвращать нечетные значения
         size_t hash = first % tableSize;
 
         // поиск добавляемой ячейки
-        if (table[hash] == key)
+        for (int i = 1; i <= tableSize; ++i)
         {
-            return false;
-        }
-        else
-        {
-            second = hasherTwo(key);
-            if (table[hash] != EMPTY)
+            if (table[hash] == key)
             {
-                for (; i < tableSize; ++i)
-                {
-                    hash = (first + i * second) % tableSize;
-                    if (table[hash] == key)
-                    {
-                        return false;
-                    }
-                    if (table[hash] == DELETED && del)
-                    {
-                        del = false;
-                        index = hash; // запоминаем первую удаленную ячейку
-                    }
-                    if (table[hash] == EMPTY)
-                    {
-                        break;
-                    }
-                }
+                return false;
             }
+            if (table[hash] == DELETED && del)
+            {
+                del = false;
+                index = hash; // запоминаем первую удаленную ячейку
+            }
+            if (table[hash] == EMPTY)
+            {
+                break;
+            }
+            hash = (first + i * second) % tableSize; // двойное хэширование
         }
-        // если не нашли удаленных ячеек, то записываем в пустую
-        if (index == -1)
+        // eсли не нашли удаленных ячеек, то записываем в пустую if (index == -1)
         {
             index = hash;
         }
-        // если ячейка не удаленная и не пустая, мы сделали кол-во пробирований = количество ячеек в таблице, и нужно увеличить таблицу
-        if (table[index] != DELETED && table[index] != EMPTY)
-        {
-            grow();
-            i = 1;
-            index = first % tableSize;
-            while (table[index] != DELETED && table[index] != EMPTY && i < tableSize)
-            {
-                index = (first + i * second) % tableSize; // пробирование двойным хэшированием
-                ++i;
-            }
-        }
+        // если ячейка не удаленная и не пустая, мы сделали кол-во пробирований = количество ячеек в таблице, нужно увеличить таблицу
+        // if (table[index] != DELETED && table[index] != EMPTY)
+        // {
+        //     grow();
+        //     i = 1;
+        //     index = first % tableSize;
+        //     while (table[index] != DELETED && table[index] != EMPTY && i < tableSize)
+        //     {
+        //         index = (first + i * second) % tableSize; // пробирование двойным хэшированием
+        //         ++i;
+        //     }
+        // }
         table[index] = key;
         if (del)
         {
@@ -124,27 +112,20 @@ public:
         size_t first = hasherOne(key);
         size_t hash = first % tableSize;
 
-        if (table[hash] == key)
+        size_t second = hasherTwo(key) * 2 + 1; // h2 должна возвращать нечетные значения
+        for (int i = 1; i <= tableSize; ++i)
         {
-            return true;
-        }
-        else
-        {
-            size_t second = hasherTwo(key);
-            for (int i = 0; i < tableSize; ++i)
+            if (table[hash] == key)
             {
-                hash = (first + i * second) % tableSize; // двойное хэширование
-                if (table[hash] == key)
-                {
-                    return true;
-                }
-                if (table[hash] == EMPTY)
-                {
-                    return false;
-                }
+                return true;
             }
-            return false;
+            if (table[hash] == EMPTY)
+            {
+                return false;
+            }
+            hash = (first + i * second) % tableSize; // двойное хэширование
         }
+        return false;
     }
 
     // Deleting
@@ -153,27 +134,19 @@ public:
         size_t first = hasherOne(key);
         size_t hash = first % tableSize;
 
-        if (table[hash] == key)
+        size_t second = hasherTwo(key) * 2 + 1; // h2 должна возвращать нечетные значения
+        for (int i = 1; i <= tableSize; ++i)
         {
-            table[hash] = DELETED;
-            return true;
-        }
-        else
-        {
-            size_t second = hasherTwo(key);
-            for (int i = 1; i < tableSize; ++i)
+            if (table[hash] == key)
             {
-                hash = (first + i * second) % tableSize;
-                if (table[hash] == key)
-                {
-                    table[hash] = DELETED;
-                    return true;
-                }
-                if (table[hash] == EMPTY)
-                {
-                    return false;
-                }
+                table[hash] = DELETED;
+                return true;
             }
+            if (table[hash] == EMPTY)
+            {
+                break;
+            }
+            hash = (first + i * second) % tableSize;
         }
         return false;
     }
@@ -195,14 +168,14 @@ private:
                     --size;
                     break;
                 }
-                // иначе ищем место для ячейки в новой таблицец
+                // иначе ищем место для ячейки в новой таблице
                 size_t firstHash = hasherOne(table[i]);
                 size_t hash = firstHash % tableSize;
                 if (newTable[hash] != EMPTY)
                 {
-                    int j = 1;
-                    size_t secondHash = hasherTwo(table[i]);
-                    hash = (firstHash + j * secondHash) % tableSize;
+                    int j = 0;
+                    size_t secondHash = hasherTwo(table[i]) * 2 + 1;
+                    hash = firstHash % tableSize;
                     while (newTable[hash] != EMPTY)
                     {
                         ++j;
@@ -225,7 +198,7 @@ private:
 
 void doLogic(std::istream &in, std::ostream &out)
 {
-    Hashtable<std::string, StringHasher> table;
+    HashTable<std::string, StringHasher> table;
 
     char op;
     std::string key;
@@ -357,7 +330,7 @@ int main()
     // testLogic();
     // std::cout << "Test OK" << std::endl;
 
-    Hashtable<std::string, StringHasher> table;
+    HashTable<std::string, StringHasher> table;
 
     char op;
     std::string key;
@@ -380,6 +353,10 @@ int main()
         {
             std::cout << (table.Delete(key) ? "OK" : "FAIL") << std::endl;
             break;
+        }
+        case '!':
+        {
+            return 0;
         }
         }
     }

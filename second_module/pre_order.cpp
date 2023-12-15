@@ -8,6 +8,12 @@
 // DFS(left)
 // DFS(right)
 
+// 10 2 5 6 4 7 8 9 3 1 10
+// 2 1 5 4 3 6 7 8 9 10
+
+// 10 5 9 4 3 7 2 6 10 1 8
+// 5 4 3 2 1 9 7 6 8 10
+
 #include <iostream>
 #include <vector>
 #include <stack>
@@ -15,31 +21,11 @@
 template <class T>
 struct Node
 {
-    Node() : left(nullptr), right(nullptr), visited(false){};
-    Node(T &data) : left(nullptr), right(nullptr), visited(false), deleted(false), value(data){};
-    ~Node(){
-        // delete left;
-        // delete right;
-    };
-
-    bool is_visited()
-    {
-        return visited;
-    }
-
-    void visit()
-    {
-        visited = true;
-    }
-
-    void delet()
-    {
-        deleted = true;
-    }
+    Node() : left(nullptr), right(nullptr){};
+    Node(T &data) : left(nullptr), right(nullptr), value(data){};
+    ~Node(){};
 
     T value;
-    bool deleted;
-    bool visited;
     Node *left;
     Node *right;
 };
@@ -127,132 +113,55 @@ void BTree<T, Comparator>::Insert(T &data)
 template <typename T, typename Comparator>
 std::vector<int> BTree<T, Comparator>::PrintPreOrder()
 {
-    std::stack<Node<int> *> st;
-    Node<int> *p = root;
+    std::vector<int> ans(size, 0);
+    std::stack<Node<T> *> st;
     int i = 0;
-    std::vector<int> result(size, 0);
-    result[i++] = p->value;
-    st.push(p);
-    while (i != size)
+
+    Node<T> *current = root;
+
+    while (current || !st.empty())
     {
-        if (p->left && !p->left->is_visited())
+        while (current)
         {
-            p = p->left;
-            p->visit();
-            result[i] = p->value;
-            st.push(p);
-            ++i;
+            ans[i++] = current->value;
+
+            if (current->right)
+                st.push(current->right);
+
+            current = current->left;
         }
-        else if (p->right && !p->right->is_visited())
+
+        if (!st.empty())
         {
-            p = p->right;
-            p->visit();
-            result[i] = p->value;
-            st.push(p);
-            ++i;
-        }
-        else
-        {
-            p = st.top();
+            current = st.top();
             st.pop();
         }
     }
-    return result;
-};
+
+    return ans;
+}
 
 template <typename T, typename Comparator>
 BTree<T, Comparator>::~BTree()
 {
-    // std::stack<Node<int> *> st;
-    // Node<int> *p = root;
-    // st.push(p);
-    // while (!st.empty())
-    // {
-    //     if (p->left || p->right)
-    //     {
-    //         if (p->left->left || p->left->right)
-    //         {
-    //             st.push(p);
-    //             p = p->left;
-    //         }
-    //         else if (p->right->left || p->right->right)
-    //         {
-    //             st.push(p);
-    //             p = p->right;
-    //         }
-    //         else
-    //         {
-    //             delete p;
-    //             p = st.top();
-    //             st.pop();
-    //         }
-    //     }
-    // }
+    std::stack<Node<T> *> st;
+    Node<T> *current = root;
 
-    std::stack<Node<int> *> st;
-    Node<int> *p = root;
-    int i = 0;
-    if (p->left && p->right)
+    while (current || !st.empty())
     {
-        st.push(p);
-        st.push(p);
-    }
-    else if (p->left || p->right)
-    {
-        st.push(p);
-    }
-    while (!st.empty())
-    {
-        if (p->left && !p->left->deleted)
+        while (current)
         {
-            p = p->left;
-            if (p->left && p->right)
-            {
-                st.push(p);
-                st.push(p);
-            }
-            else if (p->left || p->right)
-            {
-                st.push(p);
-            }
-            else
-            {
-                delete p;
-                p = st.top();
-                st.pop();
-                p->left->deleted = true;
-            }
-            ++i;
+            st.push(current);
+            current = current->left;
         }
-        else if (p->right && !p->right->deleted)
-        {
-            p = p->right;
-            if (p->left && p->right)
-            {
-                st.push(p);
-                st.push(p);
-            }
-            else if (p->left || p->right)
-            {
-                st.push(p);
-            }
-            else
-            {
-                delete p;
-                p = st.top();
-                st.pop();
-                p->right->deleted = true;
-            }
-        }
-        else
-        {
-            delete p;
-            p->deleted = true;
-            p = st.top();
-            st.pop();
-        }
+
+        current = st.top();
+        st.pop();
+
+        Node<T> *tmp = current->right;
+        delete current;
+        current = tmp;
     }
-    delete root;
 }
 
 int main()

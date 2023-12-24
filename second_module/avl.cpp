@@ -38,60 +38,99 @@
 //     элемент на место удаляемого берется из более глубокого поддерева (либо максимальный из левого, либо минимальный из правого)
 
 #include <iostream>
+#include <vector>
+#include <cmath>
 
-// дописать компаратор
 template <typename T>
-class AvlTree
+struct DefaultComparator
+{
+    int operator()(const T &l, const T &r) const
+    {
+        if (l < r)
+            return -1;
+        if (l > r)
+            return 1;
+        return 0;
+    }
+};
+
+template <typename Key, typename Value, typename Comparator = DefaultComparator<Key>>
+class AVLTree
 {
     struct Node
     {
-        Node(const T &data)
-            : data(data), left(nullptr), right(nullptr), height(1)
-        {
-        }
-
-        T data;
         Node *left;
         Node *right;
-        size_t height;
+
+        Key key;
+        Value value;
+
+        uint8_t height;
+
+        Node() : left(nullptr), right(nullptr){};
+
+        Node(const Key &key, const Value &value) : left(nullptr), right(nullptr),
+                                                   key(key), value(value), height(1)
+        {
+        }
+        ~Node() {}
     };
 
 public:
-    AvlTree()
-        : root(nullptr)
+    AVLTree(Comparator comp = Comparator()) : root(nullptr),
+                                              items_count(0),
+                                              comp(comp)
     {
     }
 
-    ~AvlTree()
+    ~AVLTree()
     {
         destroyTree(root);
     }
 
-    void Add(const T &data)
+    size_t size() const { return items_count; }
+
+    Value *find(const Key &key)
     {
-        root = addInternal(root, data);
+        return find_aux(key, root);
     }
 
-    bool Has(const T &data)
+    void insert(const Key &key, const Value &value)
     {
-        Node *tmp = root;
-        while (tmp)
-        {
-            if (tmp->data == data)
-                return true;
-            else if (tmp->data < data)
-                tmp = tmp->right;
-            else
-                tmp = tmp->left;
-        }
-        return false;
+        root = insert_aux(key, value, root);
     }
-    void Delete(const T &data)
+
+    void erase(const Key &key)
     {
-        root = deleteInternal(root, data);
+        root = erase_aux(key, root);
+    }
+
+    Value kth_statistic(int index)
+    {
+        std::vector<Value> arr(0, 0);
+
+        biuld_array(root, arr);
+
+        Value ans = arr[index];
+
+        return ans;
     }
 
 private:
+    // Обходим дерево в порядке in-order
+    void biuld_array(Node *node, std::vector<Value> &result)
+    {
+        if (node->left)
+        {
+            biuld_array(node->left, result);
+        }
+        result.push_back(node->value);
+        if (node->right)
+        {
+            biuld_array(node->right, result);
+        }
+    }
+
     void destroyTree(Node *node)
     {
         if (node)
@@ -102,126 +141,234 @@ private:
         }
     }
 
-    Node *deleteInternal(Node *node, const T &data)
+    Value *find_aux(const Key &key, Node *node)
     {
         if (!node)
-            return nullptr;
-        if (node->data < data)
-            node->right = deleteInternal(node->right, data);
-        else if (node->data > data)
-            node->left = deleteInternal(node->left, data);
-        else
         {
+            return nullptr;
+        }
+        int cmp_res = comp(key, node->key);
+        if (cmp_res == -1)
+        { // key < node->key
+            return find_aux(key, node->left);
+        }
+        else if (cmp_res == 1)
+        { // key > node->key
+            return find_aux(key, node->right);
+        }
+        // key == node->key
+        return &node->value;
+    }
+
+    Node *insert_aux(const Key &key, const Value &value, Node *node)
+    {
+        if (!node)
+        {
+            items_count++;
+            return new Node(key, value);
+        }
+        int cmp_res = comp(key, node->key);
+        if (cmp_res == -1)
+        { // key < node->key
+            node->left = insert_aux(key, value, node->left);
+        }
+        else if (cmp_res == 1)
+        { // key > node->key
+            node->right = insert_aux(key, value, node->right);
+        }
+        // key == node->key
+        return balance(node);
+    }
+
+    Node *erase_aux(const Key &key, Node *node)
+    {
+        if (!node)
+        {
+            return nullptr;
+        }
+
+        int cmp_res = comp(key, node->key);
+        if (cmp_res == -1)
+        { // key < node->key
+            node->left = erase_aux(key, node->left);
+        }
+        else if (cmp_res == 1)
+        { // key > node->key
+            node->right = erase_aux(key, node->right);
+        }
+        else
+        { // key == node->key
             Node *left = node->left;
             Node *right = node->right;
 
-            delete node;
+            // delete node;
+            items_count--;
 
             if (!right)
+            {
                 return left;
+            }
 
-            // поддерево, из которого берем элемент взамен удаляемого, выбираем на основе сравнения глубин.
-            // (берем из более глубокого)
+            // В ДЗ ДЕЛАТЬ ОДНОЙ ФУНКЦИЕЙ find_and_remove_min_node
+            Node *new_node = find_and_remove_min_or_max(node);
+            delete node;
 
-            // findMin и removeMin объединить в один метод findAndRemoveMin/findAndRemoveMax
-            Node *min = findMin(right);    // возвращает минимальный элемент в дереве
-            min->right = removeMin(right); // возвращает дерево, из которого удалили минимальный элемент
-            min->left = left;
+            if (left && new_node->value != left->value)
+            {
+                new_node->left = left;
+            }
+            if (right && new_node->value != right->value)
+            {
+                new_node->right = right;
+            }
 
-            return doBalance(min);
+            return balance(new_node);
         }
-
-        return doBalance(node);
+        return balance(node);
     }
 
-    Node *findMin(Node *node)
+    // Node *remove_min_node(Node *node)
+    // {
+    //     if (!node->left)
+    //     {
+    //         return node->right;
+    //     }
+
+    //     node->left = remove_min_node(node->left);
+    //     return balance(node);
+    // }
+
+    Node *find_and_remove_min_or_max(Node *node)
     {
-        while (node->left)
+        Node *need_node = nullptr;
+        // Найдем минимум в более глубоком дереве
+        int bf = bfactor(node);
+        Node *parent = nullptr;
+
+        // Если правое дерево глубже или имеют такую же глубину
+        if (bf >= 0)
+        {
+            node = node->right;
+            parent = node;
+
+            while (node->left) // Ищем родителя минимального элемента
+            {
+                parent = node;
+                node = node->left;
+            }
+            need_node = node;                // need_node - минимальный
+            parent->left = need_node->right; // правое поддерево минимального элемента переносим к родителю минимального элемента
+        }
+        // Если левое дерево глубже
+        else
+        {
             node = node->left;
+            parent = node;
+
+            while (node->right->right) // Ищем родителя максимального элемента
+            {
+                parent = node;
+                node = node->right;
+            }
+
+            need_node = node->right;         // need_node - максимальный
+            parent->right = need_node->left; // левое поддерево максимального элемента переносим к родителю максимального элемента
+        }
+        return need_node;
+    }
+
+    uint8_t height(Node *node)
+    {
+        if (!node)
+        {
+            return 0;
+        }
+        return node->height;
+    }
+
+    void fix_height(Node *node)
+    {
+        node->height = std::max(height(node->left), height(node->right)) + 1;
+        //
+    }
+
+    int bfactor(Node *node)
+    {
+        return height(node->right) - height(node->left);
+    }
+
+    Node *balance(Node *node)
+    {
+        fix_height(node);
+
+        int bf = bfactor(node);
+        if (bf == 2)
+        {
+            if (bfactor(node->right) < 0)
+            {
+                node->right = rotate_right(node->right);
+            }
+            return rotate_left(node);
+        }
+
+        if (bf == -2)
+        {
+            if (bfactor(node->left) > 0)
+            {
+                node->left = rotate_left(node->left);
+            }
+            return rotate_right(node);
+        }
+
         return node;
     }
 
-    Node *removeMin(Node *node)
-    {
-        if (!node->left)
-            return node->right;
-        node->left = removeMin(node->left);
-        return doBalance(node);
-    }
-
-    Node *addInternal(Node *node, const T &data)
-    {
-        if (!node)
-            return new Node(data);
-        if (node->data <= data)
-            node->right = addInternal(node->right, data);
-        else
-            node->left = addInternal(node->left, data);
-
-        return doBalance(node);
-    }
-
-    size_t getHeight(Node *node)
-    {
-        return node ? node->height : 0;
-    }
-
-    void fixHeight(Node *node)
-    {
-        node->height = std::max(getHeight(node->left), getHeight(node->right)) + 1;
-    }
-
-    int getBalance(Node *node)
-    {
-        return getHeight(node->right) - getHeight(node->left);
-    }
-
-    Node *rotateLeft(Node *node)
+    Node *rotate_left(Node *node)
     {
         Node *tmp = node->right;
         node->right = tmp->left;
         tmp->left = node;
-        fixHeight(node);
-        fixHeight(tmp);
+        fix_height(node);
+        fix_height(tmp);
         return tmp;
-    }
-
-    Node *rotateRight(Node *node)
+    };
+    Node *rotate_right(Node *node)
     {
         Node *tmp = node->left;
         node->left = tmp->right;
         tmp->right = node;
-        fixHeight(node);
-        fixHeight(tmp);
+        fix_height(node);
+        fix_height(tmp);
         return tmp;
-    }
-
-    Node *doBalance(Node *node)
-    {
-        fixHeight(node);
-        switch (getBalance(node))
-        {
-        case 2:
-        {
-            if (getBalance(node->right) < 0)
-                node->right = rotateRight(node->right);
-            return rotateLeft(node);
-        }
-        case -2:
-        {
-            if (getBalance(node->left) > 0)
-                node->left = rotateLeft(node->left);
-            return rotateRight(node);
-        }
-        default:
-            return node;
-        }
-    }
+    };
 
     Node *root;
+    size_t items_count;
+    Comparator comp;
 };
 
 int main(int argc, const char *argv[])
 {
+    AVLTree<int, int> *tree = new AVLTree<int, int>();
+    int n = 0, value = 0, index = 0;
+
+    std::cin >> n;
+    for (int i = 0; i < n; ++i)
+    {
+        std::cin >> value >> index;
+        if (value > 0)
+        {
+            tree->insert(value, value);
+        }
+        else if (value < 0)
+        {
+            value = std::abs(value);
+            tree->erase(value);
+        }
+        std::cout << tree->kth_statistic(index) << std::endl;
+    }
+
+    delete tree;
+
     return 0;
 }

@@ -14,20 +14,20 @@
 #include <assert.h>
 #include "hash_table.h"
 
-const size_t DEFAULT_SIZE = 8;
-std::string DELETED = "DEL";
-std::string EMPTY = "NIL";
-
 // Хеширование методом Горнера
-StringHasher::StringHasher(size_t prime = 71)
-    : prime(prime){};
 
-size_t StringHasher::operator()(const std::string &str)
+StringHasher::StringHasher(size_t prime) : prime(prime)
+{
+}
+
+size_t StringHasher::operator()(const int number)
 {
     size_t hash = 0;
-    for (int i = 0; i < str.size(); i++)
+    int num = number;
+    while (num != 0)
     {
-        hash = hash * prime + str[i];
+        hash = hash * prime + num % 10;
+        num = num / 10;
     }
     return hash;
 }
@@ -171,171 +171,4 @@ void HashTable<T, Hasher>::grow()
     }
 
     table = std::move(newTable);
-}
-
-void doLogic(std::istream &in, std::ostream &out)
-{
-    HashTable<std::string, StringHasher> table;
-
-    char op;
-    std::string key;
-
-    while (in >> op >> key)
-    {
-        switch (op)
-        {
-        case '?':
-        {
-            out << (table.Has(key) ? "OK" : "FAIL") << std::endl;
-            break;
-        }
-        case '+':
-        {
-            out << (table.Add(key) ? "OK" : "FAIL") << std::endl;
-            break;
-        }
-        case '-':
-        {
-            out << (table.Delete(key) ? "OK" : "FAIL") << std::endl;
-            break;
-        }
-        case '!':
-        {
-            return;
-        }
-        }
-    }
-    return;
-}
-
-void testLogic()
-{
-    // first test
-    {
-        std::stringstream in;
-        in << "+ hello + bye ? bye + bye - bye ? bye ? hello ";
-
-        std::stringstream out;
-        doLogic(in, out);
-        assert(out.str() == "OK\nOK\nOK\nFAIL\nOK\nFAIL\nOK\n");
-    }
-
-    // double resize
-    {
-        std::stringstream in;
-        in << "+ hello + bye + good + afternoon + day + night + minecraft + football + messi + ok + lol + alg + cobol + fortran + popo - hello - bye ? day ";
-
-        std::stringstream out;
-        doLogic(in, out);
-        assert(out.str() == "OK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\n");
-    }
-
-    // empty table
-    {
-        std::stringstream in;
-        in << "? day - hello - bye + day ?day ";
-
-        std::stringstream out;
-        doLogic(in, out);
-        assert(out.str() == "FAIL\nFAIL\nFAIL\nOK\nOK\n");
-    }
-
-    // add existing element
-    {
-        std::stringstream in;
-        in << "+ hello + hello - bye ? day ";
-
-        std::stringstream out;
-        doLogic(in, out);
-        assert(out.str() == "OK\nFAIL\nFAIL\nFAIL\n");
-    }
-
-    // find after deleting
-    {
-        std::stringstream in;
-        in << "+ hello  + messi ? hello - hello ? hello ";
-
-        std::stringstream out;
-        doLogic(in, out);
-        assert(out.str() == "OK\nOK\nOK\nOK\nFAIL\n");
-    }
-
-    // double resize and deleting and find
-    {
-        std::stringstream in;
-        in << "+ hello + bye + good + afternoon + day + night + minecraft + football + messi + ok + lol + alg + cobol + fortran + popo - hello - bye ? day ? good ? afternoon ? day ? night ? minecraft ? football ? messi ? ok ? lol - alg - cobol - fortran - popo";
-
-        std::stringstream out;
-        doLogic(in, out);
-        // std::cout << out.str();
-        assert(out.str() == "OK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\n");
-    }
-
-    // triple resize and delete and find
-    {
-        std::stringstream in;
-        in << "+ a + b + c + d + e + f + g + h + i + j + k + l + m + n + o + p + q + r + s + t + u + v + w + x + y + z - a - b - c - d ? e ? f ? g ? h ? i ? j ? k ? l - m - n - o - p - q - r - s ? t ? u ? v ? w ? x ? y ? z";
-
-        std::stringstream out;
-        doLogic(in, out);
-        assert(out.str() == "OK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\n");
-    }
-
-    // long strings
-    {
-        std::stringstream in;
-        in << "+ abcdefghijklmnopqrstuvwxyz + abcdefghijklmnopqrstuvwxyzzyxwvutsrqponmlkjihgfedcba - abcdefghijklmnopqrstuvwxyzzyxwvutsrqponmlkjihgfedcba + abcdefghijklmnopqrstuvwxyzzyxwvutsrqponmlkjihgfedcba ? abcdefghijklmnopqrstuvwxyz";
-
-        std::stringstream out;
-        doLogic(in, out);
-        assert(out.str() == "OK\nOK\nOK\nOK\nOK\n");
-    }
-
-    // OK and FAIL
-    {
-        std::stringstream in;
-        in << "+ cat + rat + bat + hat + mat + pat + sat + vat + fat + gat + hat + iat + jat + kat + lat + mat + nat + oat + pat + qat + rat + sat + tat + uat + vat + wat + xat + yat + zat - vat - wat - xat - yat - zat ? cat ? rat ? bat ? hat ? mat";
-
-        std::stringstream out;
-        doLogic(in, out);
-        assert(out.str() == "OK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nFAIL\nOK\nOK\nOK\nOK\nFAIL\nOK\nOK\nFAIL\nOK\nFAIL\nFAIL\nOK\nOK\nFAIL\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\nOK\n");
-    }
-}
-
-int main()
-{
-    // testLogic();
-    // std::cout << "Test OK" << std::endl;
-
-    HashTable<std::string, StringHasher> table;
-
-    char op;
-    std::string key;
-
-    while (std::cin >> op >> key)
-    {
-        switch (op)
-        {
-        case '?':
-        {
-            std::cout << (table.Has(key) ? "OK" : "FAIL") << std::endl;
-            break;
-        }
-        case '+':
-        {
-            std::cout << (table.Add(key) ? "OK" : "FAIL") << std::endl;
-            break;
-        }
-        case '-':
-        {
-            std::cout << (table.Delete(key) ? "OK" : "FAIL") << std::endl;
-            break;
-        }
-        case '!':
-        {
-            return 0;
-        }
-        }
-    }
-    return 0;
 }

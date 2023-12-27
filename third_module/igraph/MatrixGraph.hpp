@@ -1,6 +1,7 @@
 #pragma once
 #include "IGraph.hpp"
 
+// Матрица смежности
 class MatrixGraph : public IGraph
 {
 public:

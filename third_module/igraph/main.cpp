@@ -85,21 +85,11 @@ int main()
     mgraph.AddEdge(0, 1);
     mgraph.AddEdge(1, 0);
 
-    // mgraph.AddEdge(1, 2);
-    // mgraph.AddEdge(2, 1);
-
     mgraph.AddEdge(1, 3);
 
-    // mgraph.AddEdge(2, 3);
-    // mgraph.AddEdge(3, 2);
-
-    // mgraph.AddEdge(2, 4);
     mgraph.AddEdge(4, 2);
 
     mgraph.AddEdge(3, 4);
-    // mgraph.AddEdge(4, 3);
-
-    // mgraph.AddEdge(1, 5);
 
     std::cout << "DFS MatrixGraph: ";
     dfs(mgraph, [](int v)

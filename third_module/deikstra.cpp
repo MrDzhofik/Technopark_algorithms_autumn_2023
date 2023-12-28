@@ -1,29 +1,31 @@
 #include <iostream>
 #include <vector>
 #include <queue>
-#include <limits>
+#include <sstream>
+#include <cassert>
 
-const int INF = std::numeric_limits<int>::max();
+const int INF = 10000000;
 
 struct WeightedEdge
 {
     int to;
     int weight;
 
-    WeightedEdge(int _to, int _weight) : to(_to), weight(_weight) {}
+    WeightedEdge(int to, int weight) : to(to), weight(weight) {}
 };
 
 class WeightedGraph
 {
 public:
-    WeightedGraph(int _vertices) : vertices(_vertices), adjacencyList(_vertices) {}
+    WeightedGraph(int vertices) : vertices(vertices), adjacencyList(vertices) {}
 
     void addEdge(int from, int to, int weight)
     {
-        adjacencyList[from].emplace_back(to, weight);
+        WeightedEdge tmp(to, weight);
+        adjacencyList[from].push_back(tmp);
     }
 
-    std::vector<int> dijkstra(int start)
+    std::vector<int> deikstra(int start)
     {
         std::vector<int> distance(vertices, INF);
         distance[start] = 0;
@@ -64,6 +66,64 @@ private:
     std::vector<std::vector<WeightedEdge>> adjacencyList;
 };
 
+void doLogic(std::istream &in, std::ostream &out)
+{
+    int towns = 0;
+    std::cin >> towns;
+    WeightedGraph weightedGraph(towns);
+
+    int roads = 0;
+    std::cin >> roads;
+    int from = 0, to = 0, weight = 0;
+    for (int i = 0; i < roads; ++i)
+    {
+        std::cin >> from >> to >> weight;
+        weightedGraph.addEdge(from, to, weight);
+        weightedGraph.addEdge(to, from, weight);
+    }
+
+    int start = 0, finish = 0;
+    std::cin >> start >> finish;
+    std::vector<int> distances = weightedGraph.deikstra(start);
+
+    std::cout << distances[finish] << std::endl;
+}
+
+void testLogic()
+{
+    // first test
+    {
+        std::stringstream in;
+        in << "6 9 0 3 1 0 4 2 1 2 7 1 3 2 1 4 3 1 5 3 2 5 3 3 4 4 3 5 6 0 2 ";
+
+        std::stringstream out;
+        doLogic(in, out);
+        assert(out.str() == "9\n");
+    }
+
+    // start vertex is not 0
+    // first test
+    {
+        std::stringstream in;
+        in << "6 9 0 3 1 0 4 2 1 2 7 1 3 2 1 4 3 1 5 3 2 5 3 3 4 4 3 5 6 1 4 ";
+
+        std::stringstream out;
+        doLogic(in, out);
+        assert(out.str() == "3\n");
+    }
+
+    // finsih vertex is smaller
+    // first test
+    {
+        std::stringstream in;
+        in << "6 9 0 3 1 0 4 2 1 2 7 1 3 2 1 4 3 1 5 3 2 5 3 3 4 4 3 5 6 4 2 ";
+
+        std::stringstream out;
+        doLogic(in, out);
+        assert(out.str() == "9\n");
+    }
+}
+
 int main()
 {
     int towns = 0;
@@ -80,24 +140,26 @@ int main()
         weightedGraph.addEdge(to, from, weight);
     }
 
-    int startVertex = 0;
-    std::vector<int> distances = weightedGraph.dijkstra(startVertex);
+    int start = 0, finish = 0;
+    std::cin >> start >> finish;
+    std::vector<int> distances = weightedGraph.deikstra(start);
 
     // Вывод результатов
-    std::cout << "Shortest distances from vertex " << startVertex << ":\n";
-    for (int i = 0; i < towns; ++i)
-    {
-        if (distances[i] == INF)
-        {
-            std::cout << "Vertex " << i << ": unreachable\n";
-        }
-        else
-        {
-            std::cout << "Vertex " << i << ": " << distances[i] << "\n";
-        }
-    }
+    // std::cout << "Shortest distances from vertex " << start << ":\n";
+    // for (int i = 0; i < towns; ++i)
+    // {
+    //     if (distances[i] == INF)
+    //     {
+    //         std::cout << "Vertex " << i << ": unreachable\n";
+    //     }
+    //     else
+    //     {
+    //         std::cout << "Vertex " << i << ": " << distances[i] << "\n";
+    //     }
+    // }
 
     // Осталось только добавить функцию поиска кратчайшего пути от одной точки до другой
+    std::cout << distances[finish] << std::endl;
 
     return 0;
 }

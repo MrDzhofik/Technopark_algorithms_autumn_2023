@@ -30,6 +30,21 @@ ListGraph::ListGraph(const IGraph &graph) : adjacencyLists(graph.VerticesCount()
     }
 }
 
+ListGraph::~ListGraph()
+{
+    for (int i = 0; i < adjacencyLists.size(); ++i)
+    {
+        Rebro *head = adjacencyLists[i];
+        Rebro *tmp = nullptr;
+        while (head)
+        {
+            tmp = head->next;
+            delete head;
+            head = tmp;
+        }
+    }
+}
+
 std::vector<int> ListGraph::GetNextVertices(int vertex) const
 {
     assert(0 <= vertex && vertex < adjacencyLists.size());

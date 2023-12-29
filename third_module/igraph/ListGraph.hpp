@@ -21,7 +21,7 @@ public:
 
     ListGraph(const IGraph &graph);
 
-    ~ListGraph(){};
+    ~ListGraph();
 
     void AddEdge(int from, int to) override;
 

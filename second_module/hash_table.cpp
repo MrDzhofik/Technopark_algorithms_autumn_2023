@@ -12,25 +12,67 @@
 #include <vector>
 #include <sstream>
 #include <assert.h>
-#include "hash_table.h"
+
+#include <iostream>
+#include <vector>
+#include <sstream>
+#include <assert.h>
 
 const size_t DEFAULT_SIZE = 8;
 std::string DELETED = "DEL";
 std::string EMPTY = "NIL";
 
 // Хеширование методом Горнера
-StringHasher::StringHasher(size_t prime = 71)
-    : prime(prime){};
-
-size_t StringHasher::operator()(const std::string &str)
+class StringHasher
 {
-    size_t hash = 0;
-    for (int i = 0; i < str.size(); i++)
+public:
+    StringHasher(size_t prime = 71)
+        : prime(prime)
     {
-        hash = hash * prime + str[i];
     }
-    return hash;
-}
+
+    size_t operator()(const std::string &str)
+    {
+        size_t hash = 0;
+        for (int i = 0; i < str.size(); i++)
+        {
+            hash = hash * prime + str[i];
+        }
+        return hash;
+    }
+
+private:
+    size_t prime;
+};
+
+template <typename T, typename Hasher>
+class HashTable
+{
+public:
+    HashTable(size_t initial_size = DEFAULT_SIZE)
+        : size(0), table(initial_size, EMPTY), tableSize(initial_size)
+    {
+    }
+
+    // Adding
+    bool Add(const T &key);
+
+    // Finding
+    bool Has(const T &key);
+
+    // Deleting
+    bool Delete(const T &key);
+
+private:
+    // rehash
+    void grow();
+
+    std::vector<T> table;
+    size_t size;
+    size_t tableSize;
+    Hasher hasherOne;
+    Hasher hasherTwo{37};
+};
 
 template <typename T, typename Hasher>
 bool HashTable<T, Hasher>::Add(const T &key)
